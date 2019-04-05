@@ -46,8 +46,7 @@ function mse = ft_entropyanalysis(cfg, data)
 %  cfg.m          = pattern length for MSE computation, default is 2
 %  cfg.r          = similarity criterion, set as a fraction of the time
 %                   series SD. Default is 0.5.
-%  cfg.normalized_r = 1 to recompute r for each time scale (default), 0 to
-%                   only compute r for scale 1 and apply to all scales.
+%  cfg.recompute_r = recompute r parameter. 'perscale' or 'perscale_toi_sp'
 %  cfg.mem_available = Memory available to perform computations (default
 %                     8e9 bytes).
 %  cfg.allowgpu     = 1 to use gpu if available, 0 to force
