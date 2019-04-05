@@ -1,18 +1,5 @@
 function mse = ft_entropyanalysis(cfg, data)
 
-% 181019 JQK | line 131, 249, 259, 261 287 commented
-%            | line 163 verbosity changed
-%            | save r parameter
-%            | add option for HPF & BPF
-%            | also use coarsegrainmethod for scale 1 (e.g., HPF)
-% 180226 JQK | 364 ff. change encoding from sc to s to allow for nonlinear scale encoding
-% 190130 JQK | filter entire time series first, then temporally segment
-%            | do not require data.trialinfo, get trialsize from .trial
-% 190405 JQK | integrated changes from previous scripts: adpative padding
-%               length; no LPF at scale 1; changed indenting; removed
-%               outdated code; corrected BP setting: at scale 1 only use HP
-%               vs. LP
-
 % FT_ENTROPYANALYSIS performs entropy and time-entropy analysis
 % on time series data over multiple trials
 %
@@ -48,6 +35,7 @@ function mse = ft_entropyanalysis(cfg, data)
 %  cfg.r          = similarity criterion, set as a fraction of the time
 %                   series SD. Default is 0.5.
 %  cfg.recompute_r = recompute r parameter. 'perscale' or 'perscale_toi_sp'
+%                   (default)
 %  cfg.mem_available = Memory available to perform computations (default
 %                     8e9 bytes).
 %  cfg.allowgpu     = 1 to use gpu if available, 0 to force
