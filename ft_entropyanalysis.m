@@ -10,7 +10,8 @@ function mse = ft_entropyanalysis(cfg, data)
 %            | do not require data.trialinfo, get trialsize from .trial
 % 190405 JQK | integrated changes from previous scripts: adpative padding
 %               length; no LPF at scale 1; changed indenting; removed
-%               outdated code
+%               outdated code; corrected BP setting: at scale 1 only use HP
+%               vs. LP
 
 % FT_ENTROPYANALYSIS performs entropy and time-entropy analysis
 % on time series data over multiple trials
@@ -201,9 +202,10 @@ for s = 1:numel(timescales) %  loop through timescales
             padlength = ceil(size(data.trial{1},2)./2); % use half the length of trial 1 as padding (JQK)
             x_pad = cellfun(@(a) ft_preproc_padding(a, 'mean', padlength), data.trial, 'UniformOutput', false );    % add padding
             x_pad = cellfun(@transpose, x_pad, 'UniformOutput', false);                                                 % transpose for filtfilt: time x chan
-            resamp_x_pad = cellfun(@(x_pad) filtfilt(B,A,x_pad), x_pad, 'UniformOutput', false );                       % low-pass filter data
-            if sc == 1
+            if sc == 1 % only HPF
+               resamp_x_pad = cellfun(@(x_pad) filtfilt(D,C,x_pad), x_pad, 'UniformOutput', false );  % high-pass filter data
             else
+                resamp_x_pad = cellfun(@(x_pad) filtfilt(B,A,x_pad), x_pad, 'UniformOutput', false );                       % low-pass filter data
                 resamp_x_pad = cellfun(@(resamp_x_pad) filtfilt(D,C,resamp_x_pad), resamp_x_pad, 'UniformOutput', false );  % high-pass filter data
             end
             resamp_x_pad = cellfun(@transpose, resamp_x_pad, 'UniformOutput', false);                                   % transpose back : chan x time again
