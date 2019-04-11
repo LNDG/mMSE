@@ -93,17 +93,14 @@ end
 % read from an old *.mat file
 data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'feedback', 'yes', 'hassampleinfo', 'yes');
 
-% % TODO check if the input cfg is valid for this function
-% cfg = ft_checkconfig(cfg, 'renamed',     {'blc', 'demean'});
-% cfg = ft_checkconfig(cfg, 'renamed',     {'blcwindow', 'baselinewindow'});
-
 % ensure that the required options are present
 cfg = ft_checkconfig(cfg, 'required', {'toi', 'timescales'});
 
 % ensure that the options are valid
 % cfg = ft_checkopt(cfg, 'normalized_r', 'double', {0, 1});
-cfg = ft_checkopt(cfg, 'recompute_r', 'char', {'perscale_toi_sp', 'per_scale'});
-cfg = ft_checkopt(cfg, 'coarsegrainmethod', 'char', {'filtskip', 'pointavg', 'bp', 'hp'});
+cfg = ft_checkopt(cfg, 'recompute_r', 'char', {'perscale_toi_sp', 'per_scale', 'per_toi'});
+cfg = ft_checkopt(cfg, 'coarsegrainmethod', 'char', {'filtskip', 'pointavg'});
+cfg = ft_checkopt(cfg, 'filtmethod', 'char', {'lp', 'hp', 'bp', 'no'});
 
 % get the options
 cfg.trials        = ft_getopt(cfg, 'trials',     'all', 1);
