@@ -1,18 +1,5 @@
 function mse = ft_permentropyanalysis(cfg, data)
 
-% 181019 JQK | line 131, 249, 259, 261 287 commented
-%            | line 163 verbosity changed
-%            | save r parameter
-%            | add option for HPF & BPF
-%            | also use coarsegrainmethod for scale 1 (e.g., HPF)
-% 181026 JQK | 364 ff. change encoding from sc to s to allow for nonlinear scale encoding
-% 191030 JQK | filter entire time series first, then temporally segment
-%            | do not require data.trialinfo, get trialsize from .trial
-% 190401 JQK | removed floor() for frequencies, at scale 1 use no LPF
-% 190402 JQK | replaced sample entropy with permutation entropy
-% 190405 JQK | corrected BP setting: at scale 1 only use HP
-%               vs. LP
-
 % FT_PERMENTROPYANALYSIS performs temporally-resolved permutation entropy
 % on time series data over multiple trials
 %
@@ -115,7 +102,8 @@ cfg = ft_checkconfig(cfg, 'required', {'toi', 'timescales'});
 
 % ensure that the options are valid
 cfg = ft_checkopt(cfg, 'nrm', 'double', {0, 1});
-cfg = ft_checkopt(cfg, 'coarsegrainmethod', 'char', {'filtskip', 'pointavg', 'bp', 'hp'});
+cfg = ft_checkopt(cfg, 'coarsegrainmethod', 'char', {'filtskip', 'pointavg'});
+cfg = ft_checkopt(cfg, 'filtmethod', 'char', {'lp', 'hp', 'bp', 'no'});
 
 % get the options
 cfg.trials        = ft_getopt(cfg, 'trials',     'all', 1);
