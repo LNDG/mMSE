@@ -36,6 +36,13 @@ function mse = ft_entropyanalysis(cfg, data)
 %                   series SD. Default is 0.5.
 %  cfg.recompute_r = recompute r parameter. 'perscale' or 'perscale_toi_sp'
 %                   (default)
+%   cfg.polyremoval = number (default = 0), specifying the order of the
+%                     polynome which is fitted and subtracted from the time
+%                     domain data prior to the spectral analysis. For
+%                     example, a value of 1 corresponds to a linear trend.
+%                     The default is a mean subtraction, thus a value of 0.
+%                     If no removal is requested, specify -1.
+%                      see FT_PREPROC_POLYREMOVAL for details
 %  cfg.mem_available = Memory available to perform computations (default
 %                     8e9 bytes).
 %  cfg.allowgpu     = 1 to use gpu if available, 0 to force
@@ -97,24 +104,10 @@ data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'feedback', 'yes', 'h
 % cfg = ft_checkconfig(cfg, 'renamed',     {'blc', 'demean'});
 % cfg = ft_checkconfig(cfg, 'renamed',     {'blcwindow', 'baselinewindow'});
 
-% make sure there are no nans in raw data (e.g. if coming from timelock with var trl lengths)
-ntrials = length(data.trial);
-cfgtmp = [];
-cfgtmp.begsample = nan(ntrials,1);
-cfgtmp.endsample = nan(ntrials,1);
-for itrial = 1:ntrials
-  nonnans = find(~isnan(data.trial{itrial}(1,:)));
-  cfgtmp.begsample(itrial,:) = nonnans(1);
-  cfgtmp.endsample(itrial,:) = nonnans(end);
-end
-data = ft_redefinetrial(cfgtmp, data);
-clear cfgtmp
-
 % ensure that the required options are present
-cfg = ft_checkconfig(cfg, 'required', {'toi', 'timescales'});
+cfg = ft_checkconfig(cfg, 'required', {'toi', 'timescales' 'filtmethod'});
 
 % ensure that the options are valid
-% cfg = ft_checkopt(cfg, 'normalized_r', 'double', {0, 1});
 cfg = ft_checkopt(cfg, 'recompute_r', 'char', {'perscale_toi_sp', 'per_scale', 'per_toi'});
 cfg = ft_checkopt(cfg, 'coarsegrainmethod', 'char', {'filtskip', 'pointavg'});
 cfg = ft_checkopt(cfg, 'filtmethod', 'char', {'lp', 'hp', 'bp', 'no'});
@@ -127,9 +120,10 @@ timescales        = ft_getopt(cfg, 'timescales'); % time scales, depends on samp
 timwin            = ft_getopt(cfg, 'timwin', 0.5); % e.g. 0.5 s
 m                 = ft_getopt(cfg, 'm', 2); % pattern length, e.g. 2
 r                 = ft_getopt(cfg, 'r', 0.5); % similarity criterion, 0.5
+polyremoval       = ft_getopt(cfg, 'polyremoval', 0);
 recompute_r       = ft_getopt(cfg, 'recompute_r', 'perscale_toi_sp'); % recompute r for each scale (1)
 coarsegrainmethod = ft_getopt(cfg, 'coarsegrainmethod', 'filtskip'); % coarsening_filt_skip or coarsening_avg
-filtmethod        = ft_getopt(cfg, 'filtmethod', 'lp'); % coarsening_filt_skip or coarsening_avg
+filtmethod        = ft_getopt(cfg, 'filtmethod', 'lp'); 
 mem_available     = ft_getopt(cfg, 'mem_available', 8e9); % 8 GB
 allowgpu          = ft_getopt(cfg, 'allowgpu', 1); % 8 GB
 
@@ -145,6 +139,27 @@ tmpcfg = keepfields(cfg, {'trials', 'channel', 'showcallinfo'});
 data = ft_selectdata(tmpcfg, data);
 % restore the provenance information
 %[cfg, data] = rollback_provenance(cfg, data);
+
+% make sure there are no nans in raw data (e.g. if coming from timelock with var trl lengths)
+ntrials = length(data.trial);
+cfgtmp = [];
+cfgtmp.begsample = nan(ntrials,1);
+cfgtmp.endsample = nan(ntrials,1);
+for itrial = 1:ntrials
+  nonnans = find(~isnan(data.trial{itrial}(1,:)));
+  cfgtmp.begsample(itrial,:) = nonnans(1);
+  cfgtmp.endsample(itrial,:) = nonnans(end);
+end
+data = ft_redefinetrial(cfgtmp, data);
+clear cfgtmp nonnans
+
+% demean the trials
+if polyremoval >= 0
+  for itrial = 1:ntrials
+    ndatsample = size(data.trial{itrial}, 2);
+    data.trial{itrial} = ft_preproc_polyremoval(data.trial{itrial}, polyremoval, 1, ndatsample);
+  end
+end
 
 % preallocate matrices
 nchan = length(data.label);
