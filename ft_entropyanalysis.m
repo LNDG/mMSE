@@ -97,6 +97,19 @@ data = ft_checkdata(data, 'datatype', {'raw+comp', 'raw'}, 'feedback', 'yes', 'h
 % cfg = ft_checkconfig(cfg, 'renamed',     {'blc', 'demean'});
 % cfg = ft_checkconfig(cfg, 'renamed',     {'blcwindow', 'baselinewindow'});
 
+% make sure there are no nans in raw data (e.g. if coming from timelock with var trl lengths)
+ntrials = length(data.trial);
+cfgtmp = [];
+cfgtmp.begsample = nan(ntrials,1);
+cfgtmp.endsample = nan(ntrials,1);
+for itrial = 1:ntrials
+  nonnans = find(~isnan(data.trial{itrial}(1,:)));
+  cfgtmp.begsample(itrial,:) = nonnans(1);
+  cfgtmp.endsample(itrial,:) = nonnans(end);
+end
+data = ft_redefinetrial(cfgtmp, data);
+clear cfgtmp
+
 % ensure that the required options are present
 cfg = ft_checkconfig(cfg, 'required', {'toi', 'timescales'});
 
