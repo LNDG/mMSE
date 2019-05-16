@@ -316,19 +316,25 @@ for s = 1:numel(timescales) %  loop through timescales
             nchan = size(data_sel.trial{1},1);
         end
         
-        % do point skipping
+        % do point skipping for scales > 1, non-HP option
         cg_data = {};
         switch coarsegrainmethod
             case 'filtskip'
-                nloops = sc;
+                if strcmp(filtmethod, 'hp')
+                    nloops = 1; % keep original sampling rate
+                    stepSize = 1;
+                else
+                    nloops = sc;
+                    stepSize = sc;
+                end
                 cg_data = cell(nloops,1); % make cell: cg_data{istart}{trials}(chan-by-time)
                 resamp_x = data_sel.trial;
                 for is = 1:nloops % loop over starting points here!
-                    cg_data{is} = cellfun(@(resamp_x) resamp_x(:, is:(sc-1+1):end), resamp_x, 'UniformOutput', false );  % add padding% Filter
+                    cg_data{is} = cellfun(@(resamp_x) resamp_x(:, is:(stepSize-1+1):end), resamp_x, 'UniformOutput', false );  % downsample data
                 end
                 clear resamp_x;
             case 'pointavg' % original point averaging coarse graining, no loop over starting points
-                if sc == 1 % no coarse graining for native sampling rate
+                if sc == 1 || strcmp(filtmethod, 'hp') % no coarse graining for native sampling rate or high-pass entropy
                     cg_data{1} = data_sel.trial; %only keep trial data
                     nloops = 1; % no loop across starting points
                 else % coarse-grain time series at this time scale
