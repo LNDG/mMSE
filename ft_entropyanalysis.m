@@ -123,9 +123,13 @@ r                 = ft_getopt(cfg, 'r', 0.5); % similarity criterion, 0.5
 polyremoval       = ft_getopt(cfg, 'polyremoval', 0);
 recompute_r       = ft_getopt(cfg, 'recompute_r', 'perscale_toi_sp'); % recompute r for each scale (1)
 coarsegrainmethod = ft_getopt(cfg, 'coarsegrainmethod', 'filtskip'); % coarsening_filt_skip or coarsening_avg
-filtmethod        = ft_getopt(cfg, 'filtmethod', 'lp'); 
+filtmethod        = ft_getopt(cfg, 'filtmethod', 'lp');
 mem_available     = ft_getopt(cfg, 'mem_available', 8e9); % 8 GB
 allowgpu          = ft_getopt(cfg, 'allowgpu', 1); % 8 GB
+
+if strcmp(cfg.coarsegrainmethod, 'pointavg')
+    filtmethod        = 'no'; % no filtering for point averaging
+end
 
 gpuavailable = gpuDeviceCount;
 if allowgpu && gpuavailable
@@ -146,19 +150,19 @@ cfgtmp = [];
 cfgtmp.begsample = nan(ntrials,1);
 cfgtmp.endsample = nan(ntrials,1);
 for itrial = 1:ntrials
-  nonnans = find(~isnan(data.trial{itrial}(1,:)));
-  cfgtmp.begsample(itrial,:) = nonnans(1);
-  cfgtmp.endsample(itrial,:) = nonnans(end);
+    nonnans = find(~isnan(data.trial{itrial}(1,:)));
+    cfgtmp.begsample(itrial,:) = nonnans(1);
+    cfgtmp.endsample(itrial,:) = nonnans(end);
 end
 data = ft_redefinetrial(cfgtmp, data);
 clear cfgtmp nonnans
 
 % demean the trials
 if polyremoval >= 0
-  for itrial = 1:ntrials
-    ndatsample = size(data.trial{itrial}, 2);
-    data.trial{itrial} = ft_preproc_polyremoval(data.trial{itrial}, polyremoval, 1, ndatsample);
-  end
+    for itrial = 1:ntrials
+        ndatsample = size(data.trial{itrial}, 2);
+        data.trial{itrial} = ft_preproc_polyremoval(data.trial{itrial}, polyremoval, 1, ndatsample);
+    end
 end
 
 % preallocate matrices
@@ -219,7 +223,7 @@ for s = 1:numel(timescales) %  loop through timescales
             x_pad = cellfun(@(a) ft_preproc_padding(a, 'mean', padlength), data.trial, 'UniformOutput', false );    % add padding
             x_pad = cellfun(@transpose, x_pad, 'UniformOutput', false);                                                 % transpose for filtfilt: time x chan
             if sc == 1 % only HPF
-               resamp_x_pad = cellfun(@(x_pad) filtfilt(D,C,x_pad), x_pad, 'UniformOutput', false );  % high-pass filter data
+                resamp_x_pad = cellfun(@(x_pad) filtfilt(D,C,x_pad), x_pad, 'UniformOutput', false );  % high-pass filter data
             else
                 resamp_x_pad = cellfun(@(x_pad) filtfilt(B,A,x_pad), x_pad, 'UniformOutput', false );                       % low-pass filter data
                 resamp_x_pad = cellfun(@(resamp_x_pad) filtfilt(D,C,resamp_x_pad), resamp_x_pad, 'UniformOutput', false );  % high-pass filter data
@@ -316,29 +320,22 @@ for s = 1:numel(timescales) %  loop through timescales
             nchan = size(data_sel.trial{1},1);
         end
         
-        % do point skipping for scales > 1, non-HP option
+        % do point skipping
         cg_data = {};
         switch coarsegrainmethod
             case 'filtskip'
-                if strcmp(filtmethod, 'hp')
-                    nloops = 1; % keep original sampling rate
-                    stepSize = 1;
-                else
-                    nloops = sc;
-                    stepSize = sc;
-                end
+                nloops = sc;
                 cg_data = cell(nloops,1); % make cell: cg_data{istart}{trials}(chan-by-time)
                 resamp_x = data_sel.trial;
                 for is = 1:nloops % loop over starting points here!
-                    cg_data{is} = cellfun(@(resamp_x) resamp_x(:, is:(stepSize-1+1):end), resamp_x, 'UniformOutput', false );  % downsample data
+                    cg_data{is} = cellfun(@(resamp_x) resamp_x(:, is:(sc-1+1):end), resamp_x, 'UniformOutput', false );  % add padding% Filter
                 end
                 clear resamp_x;
             case 'pointavg' % original point averaging coarse graining, no loop over starting points
-                if sc == 1 || strcmp(filtmethod, 'hp') % no coarse graining for native sampling rate or high-pass entropy
+                nloops = 1; % no starting points loop for point avg
+                if sc == 1 % no coarse graining for native sampling rate
                     cg_data{1} = data_sel.trial; %only keep trial data
-                    nloops = 1; % no loop across starting points
                 else % coarse-grain time series at this time scale
-                    nloops = 1; % no loop across starting points
                     nchan = size(data_sel.trial{1},1);
                     for itrial = 1:length(data_sel.trial)
                         num_cg_tpts = floor(length(data_sel.trial{itrial})/sc); % number of coarse-grained time points
@@ -385,10 +382,20 @@ for s = 1:numel(timescales) %  loop through timescales
             % keep the estimated r parameter
             r_estimate(:, s, itoi, istart) = r_new; % dimord chan nsc ntoi nstartingpts
             
-            % chunk y to keep memory usage in check
-            max_numel = mem_available/4; % single = 4 bytes
-            chunk_size = round(max_numel/numel(y));
+            % chunk y to keep memory usage in check OLD
+            %       max_numel = mem_available/4; % single = 4 bytes
+            %       chunk_size = round(max_numel/numel(y));
+            %       n_chunks = ceil(size(y,2)/chunk_size);
+            % chunk y to keep memory usage in check NEW
+            num_avail_netto = mem_available * 1/4 - numel(y) - numel(r_new) - numel(trl_mask); % save space for y itself, cont?
+            %     max_numel = num_avail_netto/4; % single = 4 bytes
+            if num_avail_netto > intmax('int32') && allowgpu && gpuavailable % max numel allowed on gpu
+                num_avail_netto = double(intmax('int32') - numel(y) - numel(r_new));
+            end
+            chunk_size = floor(num_avail_netto / numel(y));
             n_chunks = ceil(size(y,2)/chunk_size);
+            n_chunks = ceil((size(y,2)+n_chunks)/chunk_size); % account for needed overlap
+            
             temp = 1;
             chunk_borders = zeros(n_chunks,2);
             for ic = 1:n_chunks
@@ -470,11 +477,11 @@ mse.label = data.label;
 mse.fsample = bsxfun(@rdivide, data.fsample, timescales); % sample rates after coarse graining
 mse.timescales = 1000 ./ mse.fsample; % by convention
 mse.time = toi;
-mse.dimord = 'chan_timescales_time'; 
+mse.dimord = 'chan_timescales_time';
 mse.sampen = sampen;
 mse.r = squeeze(nanmean(r_estimate,4)); % average across starting points
 if isfield(data, 'trialinfo')
-  mse.trialinfo = data.trialinfo;
+    mse.trialinfo = data.trialinfo;
 end
 mse.config = cfg;
 
