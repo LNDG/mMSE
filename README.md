@@ -12,3 +12,7 @@ Kloosterman et al. (in prep.): Increased Brain Signal Variability Underlies Stra
 -----------
 
 Short tutorial following soon ...
+
+-----------
+
+Note: GitHub directory is currently a unidirectional mirror of a GitLab directory.
