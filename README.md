@@ -11,7 +11,7 @@ Kloosterman et al. (in prep.): Increased Brain Signal Variability Underlies Stra
 
 -----------
 
-Short tutorial following soon ...
+A short tutorial can be found in the tutorial folder.
 
 -----------
 
