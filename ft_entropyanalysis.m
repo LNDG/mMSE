@@ -13,12 +13,7 @@ function mse = ft_entropyanalysis(cfg, data)
 % cfg is a configuration structure that should contain
 %
 %  cfg.toi        = vector 1 x numtoi, the times on which the analysis
-%                    windows should be centered (in seconds), or TODO a string
-%                    such as '50%' or 'all' (default).  Both string options
-%                    use all timepoints available in the data, but 'all'
-%                    centers an entropy estimate on each sample, whereas
-%                    the percentage specifies the degree of overlap between
-%                    the shortest time windows from cfg.timwin.
+%                    windows should be centered (in seconds).
 %  cfg.timwin     = vector 1 x numfoi, length of time window (in seconds)
 %  cfg.timescales = vector 1 x numtimescales, the time scales to compute MSE for.
 %                   Scale 1 is the fastest scale, i.e. sample entropy at the native
@@ -388,11 +383,7 @@ for s = 1:numel(timescales) %  loop through timescales
             % keep the estimated r parameter
             r_estimate(:, s, itoi, istart) = r_new; % dimord chan nsc ntoi nstartingpts
             
-            % chunk y to keep memory usage in check OLD
-            %       max_numel = mem_available/4; % single = 4 bytes
-            %       chunk_size = round(max_numel/numel(y));
-            %       n_chunks = ceil(size(y,2)/chunk_size);
-            % chunk y to keep memory usage in check NEW
+            % chunk y to keep memory usage in check
             num_avail_netto = mem_available * 1/4 - numel(y) - numel(r_new) - numel(trl_mask); % save space for y itself, cont?
             %     max_numel = num_avail_netto/4; % single = 4 bytes
             if num_avail_netto > intmax('int32') && allowgpu && gpuavailable % max numel allowed on gpu
@@ -489,7 +480,6 @@ mse.r = squeeze(nanmean(r_estimate,4)); % average across starting points
 if isfield(data, 'trialinfo')
     mse.trialinfo = data.trialinfo;
 end
-mse.config = cfg;
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug               % this clears the onCleanup function used for debugging in case of an error
