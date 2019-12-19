@@ -165,9 +165,11 @@ for s = 1:numel(timescales) %  loop through timescales
          case 'bp'
             fs = data.fsample;
             nyquist = fs/2;
-            fcLowPass = (1./sc).*nyquist - ((1./sc).*nyquist)./3;
-            fcHighPass = (1./sc).*nyquist + ((1./sc).*nyquist)./3;
-            [B,A] = butter(6,fcLowPass/nyquist);            % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
+            fcLowPass = (1./sc).*nyquist + ((1./sc).*nyquist)./4;
+            fcHighPass = (1./sc).*nyquist - ((1./sc).*nyquist)./4;
+            if sc > 1 % don't define low-pass for first scale, as its upper frequency limit is specified anyway
+                [B,A] = butter(6,fcLowPass/nyquist, 'low');            % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
+            end
             [D,C] = butter(6,fcHighPass/nyquist, 'high');   % define high-pass filter
             cfg.freq(1,s) = fcLowPass;
             cfg.freq(2,s) = fcHighPass;
@@ -175,17 +177,16 @@ for s = 1:numel(timescales) %  loop through timescales
             padlength = ceil(size(data.trial{1},2)./2); % use half the length of trial 1 as padding (JQK)
             x_pad = cellfun(@(a) ft_preproc_padding(a, 'mean', padlength), data.trial, 'UniformOutput', false );    % add padding
             x_pad = cellfun(@transpose, x_pad, 'UniformOutput', false);                                                 % transpose for filtfilt: time x chan
-            resamp_x_pad = cellfun(@(x_pad) filtfilt(B,A,x_pad), x_pad, 'UniformOutput', false );                       % low-pass filter data
             if sc == 1 % only HPF
                resamp_x_pad = cellfun(@(x_pad) filtfilt(D,C,x_pad), x_pad, 'UniformOutput', false );  % high-pass filter data
-            else
+            else % sequential application of low-pass and high-pass filter
                 resamp_x_pad = cellfun(@(x_pad) filtfilt(B,A,x_pad), x_pad, 'UniformOutput', false );                       % low-pass filter data
                 resamp_x_pad = cellfun(@(resamp_x_pad) filtfilt(D,C,resamp_x_pad), resamp_x_pad, 'UniformOutput', false );  % high-pass filter data
             end
             resamp_x_pad = cellfun(@transpose, resamp_x_pad, 'UniformOutput', false);                                   % transpose back : chan x time again
             resamp_x = cellfun(@(resamp_x_pad) ft_preproc_padding(resamp_x_pad, 'remove', padlength), ...                % remove padding
                 resamp_x_pad, 'UniformOutput', false );
-            %figure; hold on; plot(resamp_x{1}(1,:)); plot(data.trial{1}(1,:))
+            %figure; hold on; plot(resamp_x{1}(15,:)); plot(data.trial{1}(15,:))
             % create data_filt structure 
             data_filt = data;
             data_filt.trial = resamp_x;

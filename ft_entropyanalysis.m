@@ -200,16 +200,11 @@ for s = 1:numel(timescales) %  loop through timescales
         case 'bp'
             fs = data.fsample;
             nyquist = fs/2;
-            fcLowPass = (1/sc)*nyquist;
-            if fcLowPass == nyquist
-                fcLowPass = fcLowPass-1;
+            fcLowPass = (1./sc).*nyquist + ((1./sc).*nyquist)./4;
+            fcHighPass = (1./sc).*nyquist - ((1./sc).*nyquist)./4;
+            if sc > 1 % don't define low-pass for first scale, as its upper frequency limit is specified anyway
+                [B,A] = butter(6,fcLowPass/nyquist, 'low');            % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
             end
-            if s == numel(timescales)
-                fcHighPass = 0.5;
-            else
-                fcHighPass = (1/(timescales(s+1)))*nyquist;
-            end
-            [B,A] = butter(6,fcLowPass/nyquist);            % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
             [D,C] = butter(6,fcHighPass/nyquist, 'high');   % define high-pass filter
             cfg.freq(1,s) = fcLowPass;
             cfg.freq(2,s) = fcHighPass;
@@ -319,7 +314,7 @@ for s = 1:numel(timescales) %  loop through timescales
         cg_data = {};
         switch coarsegrainmethod
             case 'filtskip'
-                if strcmp(filtmethod, 'hp')
+                if strcmp(filtmethod, 'hp') || strcmp(filtmethod, 'bp')
                     nloops = 1; % keep original sampling rate
                     stepSize = 1;
                 else
