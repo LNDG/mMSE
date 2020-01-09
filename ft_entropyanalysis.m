@@ -200,17 +200,21 @@ for s = 1:numel(timescales) %  loop through timescales
         case 'bp'
             fs = data.fsample;
             nyquist = fs/2;
-            fcLowPass = (1/sc)*nyquist;
-            if fcLowPass == nyquist
-                fcLowPass = fcLowPass-1;
-            end
-            if s == numel(timescales)
-                fcHighPass = 0.5;
+            fcLowPass = (1./sc).*nyquist + .05*((1./sc).*nyquist);
+            fcHighPass = (1./(sc+1)).*nyquist - .05*((1./(sc+1)).*nyquist);
+            
+            if sc > 1 % don't define low-pass for first scale, as its upper frequency limit is specified anyway
+                if fcLowPass-fcHighPass > .05*nyquist
+                    [B,A] = cheby1(4,1,fcLowPass/nyquist, 'low');  % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
+                    [D,C] = cheby1(4,1,fcHighPass/nyquist,'high'); % define high-pass filter
+                else
+                    [B,A]=butter(10,fcLowPass/nyquist, 'low');    % Lowpass
+                    [D,C]=butter(10,fcHighPass/nyquist,'high');   % Highpass
+                end
             else
-                fcHighPass = (1/(timescales(s+1)))*nyquist;
-            end
-            [B,A] = butter(6,fcLowPass/nyquist);            % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
-            [D,C] = butter(6,fcHighPass/nyquist, 'high');   % define high-pass filter
+                [D,C]= butter(10,fcHighPass/nyquist,'high');   % use Butterworth highpass
+                fcLowPass = nyquist;
+            end          
             cfg.freq(1,s) = fcLowPass;
             cfg.freq(2,s) = fcHighPass;
             

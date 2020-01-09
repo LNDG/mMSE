@@ -165,34 +165,37 @@ for s = 1:numel(timescales) %  loop through timescales
          case 'bp'
             fs = data.fsample;
             nyquist = fs/2;
-            fcLowPass = (1/sc)*nyquist;
-            if fcLowPass == nyquist
-                fcLowPass = fcLowPass-1;
-            end
-            if s == numel(timescales)
-                fcHighPass = 0.5;
-            else 
-                fcHighPass = (1/(timescales(s+1)))*nyquist;
-            end
-            [B,A] = butter(6,fcLowPass/nyquist);            % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
-            [D,C] = butter(6,fcHighPass/nyquist, 'high');   % define high-pass filter
+            fcLowPass = (1./sc).*nyquist + .05*((1./sc).*nyquist);
+            fcHighPass = (1./(sc+1)).*nyquist - .05*((1./(sc+1)).*nyquist);
+            
+            if sc > 1 % don't define low-pass for first scale, as its upper frequency limit is specified anyway
+                if fcLowPass-fcHighPass > .05*nyquist
+                    [B,A] = cheby1(4,1,fcLowPass/nyquist, 'low');  % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
+                    [D,C] = cheby1(4,1,fcHighPass/nyquist,'high'); % define high-pass filter
+                else
+                    [B,A]=butter(10,fcLowPass/nyquist, 'low');    % Lowpass
+                    [D,C]=butter(10,fcHighPass/nyquist,'high');   % Highpass
+                end
+            else
+                [D,C]= butter(10,fcHighPass/nyquist,'high');   % use Butterworth highpass
+                fcLowPass = nyquist;
+            end          
             cfg.freq(1,s) = fcLowPass;
             cfg.freq(2,s) = fcHighPass;
             
             padlength = ceil(size(data.trial{1},2)./2); % use half the length of trial 1 as padding (JQK)
             x_pad = cellfun(@(a) ft_preproc_padding(a, 'mean', padlength), data.trial, 'UniformOutput', false );    % add padding
             x_pad = cellfun(@transpose, x_pad, 'UniformOutput', false);                                                 % transpose for filtfilt: time x chan
-            resamp_x_pad = cellfun(@(x_pad) filtfilt(B,A,x_pad), x_pad, 'UniformOutput', false );                       % low-pass filter data
             if sc == 1 % only HPF
                resamp_x_pad = cellfun(@(x_pad) filtfilt(D,C,x_pad), x_pad, 'UniformOutput', false );  % high-pass filter data
-            else
+            else % sequential application of low-pass and high-pass filter
                 resamp_x_pad = cellfun(@(x_pad) filtfilt(B,A,x_pad), x_pad, 'UniformOutput', false );                       % low-pass filter data
                 resamp_x_pad = cellfun(@(resamp_x_pad) filtfilt(D,C,resamp_x_pad), resamp_x_pad, 'UniformOutput', false );  % high-pass filter data
             end
             resamp_x_pad = cellfun(@transpose, resamp_x_pad, 'UniformOutput', false);                                   % transpose back : chan x time again
             resamp_x = cellfun(@(resamp_x_pad) ft_preproc_padding(resamp_x_pad, 'remove', padlength), ...                % remove padding
                 resamp_x_pad, 'UniformOutput', false );
-            %figure; hold on; plot(resamp_x{1}(1,:)); plot(data.trial{1}(1,:))
+            %figure; hold on; plot(resamp_x{1}(15,:)); plot(data.trial{1}(15,:))
             % create data_filt structure 
             data_filt = data;
             data_filt.trial = resamp_x;
@@ -259,7 +262,7 @@ for s = 1:numel(timescales) %  loop through timescales
                 end
                 clear resamp_x;
             case 'pointavg' % original point averaging coarse graining, no loop over starting points
-                if sc == 1 || strcmp(filtmethod, 'hp') % no coarse graining for native sampling rate or high-pass entropy
+                if sc == 1 % no coarse graining for native sampling rate
                     cg_data{1} = data_sel.trial; %only keep trial data
                     nloops = 1; % no loop across starting points
                 else % coarse-grain time series at this time scale
