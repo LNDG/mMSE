@@ -200,12 +200,21 @@ for s = 1:numel(timescales) %  loop through timescales
         case 'bp'
             fs = data.fsample;
             nyquist = fs/2;
-            fcLowPass = (1./sc).*nyquist + ((1./sc).*nyquist)./4;
-            fcHighPass = (1./sc).*nyquist - ((1./sc).*nyquist)./4;
+            fcLowPass = (1./sc).*nyquist + .05*((1./sc).*nyquist);
+            fcHighPass = (1./(sc+1)).*nyquist - .05*((1./(sc+1)).*nyquist);
+            
             if sc > 1 % don't define low-pass for first scale, as its upper frequency limit is specified anyway
-                [B,A] = butter(6,fcLowPass/nyquist, 'low');            % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
-            end
-            [D,C] = butter(6,fcHighPass/nyquist, 'high');   % define high-pass filter
+                if fcLowPass-fcHighPass > .05*nyquist
+                    [B,A] = cheby1(4,1,fcLowPass/nyquist, 'low');  % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
+                    [D,C] = cheby1(4,1,fcHighPass/nyquist,'high'); % define high-pass filter
+                else
+                    [B,A]=butter(10,fcLowPass/nyquist, 'low');    % Lowpass
+                    [D,C]=butter(10,fcHighPass/nyquist,'high');   % Highpass
+                end
+            else
+                [D,C]= butter(10,fcHighPass/nyquist,'high');   % use Butterworth highpass
+                fcLowPass = nyquist;
+            end          
             cfg.freq(1,s) = fcLowPass;
             cfg.freq(2,s) = fcHighPass;
             
@@ -314,7 +323,7 @@ for s = 1:numel(timescales) %  loop through timescales
         cg_data = {};
         switch coarsegrainmethod
             case 'filtskip'
-                if strcmp(filtmethod, 'hp') || strcmp(filtmethod, 'bp')
+                if strcmp(filtmethod, 'hp')
                     nloops = 1; % keep original sampling rate
                     stepSize = 1;
                 else
