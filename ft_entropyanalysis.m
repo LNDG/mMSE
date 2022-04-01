@@ -205,11 +205,11 @@ for s = 1:numel(timescales) %  loop through timescales
             
             if sc > 1 % don't define low-pass for first scale, as its upper frequency limit is specified anyway
                 if fcLowPass-fcHighPass > .05*nyquist
-                    [B,A] = cheby1(4,1,fcLowPass/nyquist, 'low');  % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
-                    [D,C] = cheby1(4,1,fcHighPass/nyquist,'high'); % define high-pass filter
-                else
                     [B,A]=butter(10,fcLowPass/nyquist, 'low');    % Lowpass
                     [D,C]=butter(10,fcHighPass/nyquist,'high');   % Highpass
+                else
+                    [B,A] = cheby1(4,1,fcLowPass/nyquist, 'low');  % define low-pass filter: https://de.mathworks.com/help/signal/ref/butter.html
+                    [D,C] = cheby1(4,1,fcHighPass/nyquist,'high'); % define high-pass filter
                 end
             else
                 [D,C]= butter(10,fcHighPass/nyquist,'high');   % use Butterworth highpass
