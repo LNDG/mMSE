@@ -126,7 +126,13 @@ if strcmp(cfg.coarsegrainmethod, 'pointavg')
     filtmethod        = 'no'; % no filtering for point averaging
 end
 
-gpuavailable = gpuDeviceCount;
+try
+    gpuavailable = gpuDeviceCount;
+catch
+    warning('gpuDeviceCount not possible, GPU processing turned off')
+    gpuavailable = false;
+end
+
 if allowgpu && gpuavailable
     fprintf('GPU device found. Running things there\n')
     gpu = gpuDevice;
