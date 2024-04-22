@@ -82,7 +82,7 @@ ft_preamble init              % this will reset ft_warning and show the function
 ft_preamble debug             % this allows for displaying or saving the function name and input arguments upon an error
 ft_preamble loadvar    data % this reads the input data in case the user specified the cfg.inputfile option
 ft_preamble provenance data % this records the time and memory usage at the beginning of the function
-ft_preamble trackconfig       % this converts the cfg structure in a config object, which tracks the cfg options that are being used
+% ft_preamble trackconfig       % this converts the cfg structure in a config object, which tracks the cfg options that are being used
 
 % the ft_abort variable is set to true or false in ft_preamble_init
 if ft_abort
@@ -493,7 +493,7 @@ end
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug               % this clears the onCleanup function used for debugging in case of an error
-ft_postamble trackconfig         % this converts the config object back into a struct and can report on the unused fields
+% ft_postamble trackconfig         % this converts the config object back into a struct and can report on the unused fields
 ft_postamble previous   data   % this copies the data.cfg structure into the cfg.previous field. You can also use it for multiple inputs, or for "varargin"
 ft_postamble provenance mse  % this records the time and memory at the end of the function, prints them on screen and adds this information together with the function name and MATLAB version etc. to the output cfg
 ft_postamble history    mse  % this adds the local cfg structure to the output data structure, i.e. dataout.cfg = cfg
