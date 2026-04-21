@@ -20,7 +20,7 @@ This GitHub repository is currently a unidirectional mirror of a GitLab director
 
 Recently, we have developed a novel algorithm based on multiscale entropy (**[Costa et al. 2002](https://doi.org/10.1103/PhysRevLett.89.068102.m)**) called modified multiscale entropy (mMSE) that directly quantifies the temporal irregularity of time-domain EEG/MEG/LFP signals at longer and shorter timescales. In general, patterns of fluctuations in brain activity that tend to repeat over time are assigned lower entropy, whereas more irregular, non-repeating patterns yield higher entropy. To allow the investigation of dynamic changes in signal irregularity, we developed mMSE as a time-resolved variant, while also permitting assessment of entropy over atypically longer time scales by calculating across discontinuous, concatenated segments (**[Grandy et al.](https://doi.org/10.1038/srep23073.m)**) (see the figure below).
 
-{% include image src="/img/figure.png" %}
+![this figure](/img/figure.png)
   
 Notably, mMSE is able to reveal brain-behavior links in EEG data that go undetected by conventional analysis methods such as spectral power, overall signal variation (SD), and event-related potentials (ERPs).  Please see our preprints **[Kloosterman et al.](https://doi.org/10.1101/834614.m)** and **[Kosciessa et al.](https://doi.org/10.1371/journal.pcbi.1007885)** for more information, and the tutorial folder on our GitHub page for a step-by-step explanation of the computation of mMSE within our fieldtrip MATLAB function.
 
